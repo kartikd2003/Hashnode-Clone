@@ -44,3 +44,13 @@ export const unpublishPost = async (id) => {
   const response = await api.post(`/posts/${id}/unpublish`);
   return response.data;
 };
+
+export const getPostsByTag = async (slug) => {
+  const response = await api.get(`/tags/${encodeURIComponent(slug)}/posts`);
+  return response.data;
+};
+
+export const getTags = async () => {
+  const response = await api.get("/tags");
+  return response.data;
+};

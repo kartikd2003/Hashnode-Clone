@@ -1,4 +1,5 @@
 const Post = require("../models/Post");
+const Tag = require("../models/Tag");
 const slugify = require("../utils/slugify");
 
 const buildUniqueSlug = async (title, excludeId = null) => {
@@ -30,6 +31,32 @@ const cleanTags = (tags) => {
       .map((tag) => tag.trim().toLowerCase())
       .filter(Boolean)
   )].slice(0, 10);
+};
+
+const syncTags = async (tags) => {
+  const normalizedTags = cleanTags(tags);
+
+  for (const name of normalizedTags) {
+    const slug = slugify(name);
+
+    if (!slug) continue;
+
+    await Tag.findOneAndUpdate(
+      { slug },
+      {
+        $setOnInsert: {
+          name,
+          slug,
+        },
+      },
+      {
+        upsert: true,
+        new: true,
+      }
+    );
+  }
+
+  return normalizedTags;
 };
 
 const makeExcerpt = (content) => {
@@ -88,7 +115,7 @@ const createPost = async (req, res, next) => {
           : makeExcerpt(content),
       coverImage:
         typeof coverImage === "string" ? coverImage.trim() : "",
-      tags: cleanTags(tags),
+      tags: await syncTags(tags),
       status: normalizedStatus,
       author: req.user.userId,
       publishedAt: normalizedStatus === "published" ? new Date() : null,
@@ -285,7 +312,7 @@ const updatePost = async (req, res, next) => {
     }
 
     if (tags !== undefined) {
-      post.tags = cleanTags(tags);
+      post.tags = await syncTags(tags);
     }
 
     if (status !== undefined) {

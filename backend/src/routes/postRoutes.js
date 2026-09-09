@@ -32,3 +32,4 @@ router.post("/:id/publish", publishPost);
 router.post("/:id/unpublish", unpublishPost);
 
 module.exports = router;
+

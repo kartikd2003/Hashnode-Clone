@@ -899,3 +899,135 @@ textarea {
     transform: scale(1);
   }
 }
+
+
+/* Hashnode Phase 5 public platform */
+.page-container {
+  width: min(1100px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 32px 0 48px;
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-header h1,
+.page-header h2 {
+  margin-bottom: 8px;
+}
+
+.page-header p {
+  margin: 0;
+  opacity: 0.72;
+}
+
+.post-list {
+  display: grid;
+  gap: 18px;
+}
+
+.empty-state {
+  padding: 40px 20px;
+  text-align: center;
+  border: 1px dashed currentColor;
+  border-radius: 12px;
+  opacity: 0.75;
+}
+
+.loading-spinner {
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.loading-spinner__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: hashnode-spin 0.8s linear infinite;
+}
+
+@keyframes hashnode-spin {
+  to { transform: rotate(360deg); }
+}
+
+.error-message {
+  width: min(700px, calc(100% - 32px));
+  margin: 40px auto;
+  padding: 20px;
+  border: 1px solid currentColor;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.error-message button {
+  margin-top: 8px;
+}
+
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(127, 127, 127, 0.12);
+  margin: 3px 5px 3px 0;
+}
+
+.site-footer {
+  margin-top: auto;
+  border-top: 1px solid rgba(127, 127, 127, 0.2);
+}
+
+.site-footer__inner {
+  width: min(1100px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 24px 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  opacity: 0.8;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 18px;
+}
+
+.profile-header__identity {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.profile-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.profile-avatar--placeholder {
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  font-weight: 700;
+  background: rgba(127, 127, 127, 0.15);
+}
+
+@media (max-width: 640px) {
+  .page-container {
+    width: min(100% - 20px, 1100px);
+    padding-top: 20px;
+  }
+
+  .profile-header__identity {
+    align-items: flex-start;
+  }
+}
