@@ -78,11 +78,21 @@ export const AuthProvider = ({ children }) => {
 
   // Update profile
   const updateProfile = async (profileData) => {
-    const response = await api.put("/auth/profile", profileData);
+    const response = await api.put("/users/me", profileData);
 
     if (response.data.success) {
       setUser(response.data.user);
     }
+
+    return response.data;
+  };
+
+  // Change password
+  const changePassword = async (currentPassword, newPassword) => {
+    const response = await api.put("/auth/change-password", {
+      currentPassword,
+      newPassword,
+    });
 
     return response.data;
   };
@@ -94,6 +104,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     updateProfile,
+    changePassword,
     isAuthenticated: !!user,
   };
 

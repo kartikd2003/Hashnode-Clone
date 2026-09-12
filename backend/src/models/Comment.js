@@ -16,6 +16,18 @@ const commentSchema = new mongoose.Schema(
       index: true,
     },
 
+    // Single-level threading: a reply always points at a top-level
+    // comment. If someone replies to a reply, the controller flattens it
+    // to the same top-level parent rather than nesting further — keeps
+    // the UI to two visual levels (comment + replies) instead of
+    // unbounded nesting.
+    parentComment: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Comment",
+      default: null,
+      index: true,
+    },
+
     content: {
       type: String,
       required: [true, "Comment content is required"],

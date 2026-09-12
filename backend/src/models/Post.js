@@ -45,7 +45,7 @@ const postSchema = new mongoose.Schema(
     },
 
     tags: {
-      type: [String],
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Tag" }],
       default: [],
     },
 

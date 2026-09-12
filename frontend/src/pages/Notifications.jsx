@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
+import LoadingSpinner from "../components/LoadingSpinner";
 import {
   getNotifications,
   markNotificationRead,
@@ -95,11 +96,11 @@ const Notifications = () => {
   };
 
   if (loading) {
-    return <p>Loading notifications...</p>;
+    return <LoadingSpinner text="Loading notifications..." />;
   }
 
   return (
-    <section className="notifications-page">
+    <section className="page-container notifications-page">
       <div className="page-header">
         <div>
           <h1>Notifications</h1>
@@ -112,6 +113,7 @@ const Notifications = () => {
         {unreadCount > 0 && (
           <button
             type="button"
+            className="primary-link"
             onClick={markAllRead}
           >
             Mark all as read

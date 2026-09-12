@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import PostCard from "../components/PostCard";
+import LoadingSpinner from "../components/LoadingSpinner";
+import ErrorMessage from "../components/ErrorMessage";
 import { getPosts } from "../services/postService";
 
 const Feed = () => {
@@ -57,7 +59,7 @@ const Feed = () => {
           <p>Discover the latest published posts.</p>
         </div>
 
-        <Link to="/posts/new" className="primary-link">
+        <Link to="/editor/new" className="primary-link">
           Write a post
         </Link>
       </div>
@@ -71,9 +73,11 @@ const Feed = () => {
         <button type="submit">Search</button>
       </form>
 
-      {loading && <p>Loading posts...</p>}
+      {loading && <LoadingSpinner text="Loading posts..." />}
 
-      {error && <div className="error-message">{error}</div>}
+      {error && !loading && (
+        <ErrorMessage message={error} onRetry={loadPosts} />
+      )}
 
       {!loading && !error && posts.length === 0 && (
         <div className="empty-state">

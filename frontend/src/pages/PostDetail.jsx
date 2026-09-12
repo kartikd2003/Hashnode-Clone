@@ -125,8 +125,6 @@ const PostDetail = () => {
   }
 
   const postId = post?._id || post?.id;
-  console.log("POST OBJECT:", post);
-  console.log("POST ID:", postId);
 
   const authorId =
     post.author?._id || post.author?.id;

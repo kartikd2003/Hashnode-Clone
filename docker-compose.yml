@@ -1,7 +1,7 @@
 services:
   mongodb:
     image: mongo:7
-    container_name: hashnode-mongodb
+    container_name: mongodb
     restart: unless-stopped
     ports:
       - "27017:27017"

@@ -1,6 +1,7 @@
 const Post = require("../models/Post");
 const Tag = require("../models/Tag");
 const slugify = require("../utils/slugify");
+const { safePost } = require("../utils/serializers");
 
 const buildUniqueSlug = async (title, excludeId = null) => {
   const base = slugify(title) || `post-${Date.now()}`;
@@ -22,26 +23,44 @@ const buildUniqueSlug = async (title, excludeId = null) => {
   }
 };
 
-const cleanTags = (tags) => {
+const cleanTagNames = (tags) => {
   if (!Array.isArray(tags)) return [];
 
-  return [...new Set(
-    tags
-      .filter((tag) => typeof tag === "string")
-      .map((tag) => tag.trim().toLowerCase())
-      .filter(Boolean)
-  )].slice(0, 10);
+  const seenSlugs = new Set();
+  const result = [];
+
+  for (const raw of tags) {
+    if (typeof raw !== "string") continue;
+
+    const trimmed = raw.trim().replace(/\s+/g, " ");
+    if (!trimmed) continue;
+
+    const slug = slugify(trimmed);
+    if (!slug || seenSlugs.has(slug)) continue;
+
+    seenSlugs.add(slug);
+    result.push(trimmed);
+
+    if (result.length >= 10) break;
+  }
+
+  return result;
 };
 
-const syncTags = async (tags) => {
-  const normalizedTags = cleanTags(tags);
+// Turns the tag-name strings typed by the author into an array of Tag
+// ObjectIds, creating any tag that doesn't exist yet. Two posts tagging
+// "Web Dev" and "web dev" resolve to the same Tag document (matched by
+// slug), so the display name shown everywhere is whichever came first.
+const resolveTagIds = async (tags) => {
+  const names = cleanTagNames(tags);
+  const tagIds = [];
 
-  for (const name of normalizedTags) {
+  for (const name of names) {
     const slug = slugify(name);
 
     if (!slug) continue;
 
-    await Tag.findOneAndUpdate(
+    const tag = await Tag.findOneAndUpdate(
       { slug },
       {
         $setOnInsert: {
@@ -54,9 +73,11 @@ const syncTags = async (tags) => {
         new: true,
       }
     );
+
+    tagIds.push(tag._id);
   }
 
-  return normalizedTags;
+  return tagIds;
 };
 
 const makeExcerpt = (content) => {
@@ -67,22 +88,6 @@ const makeExcerpt = (content) => {
     .trim()
     .slice(0, 180);
 };
-
-const safePost = (post) => ({
-  id: post._id,
-  title: post.title,
-  slug: post.slug,
-  content: post.content,
-  excerpt: post.excerpt,
-  coverImage: post.coverImage,
-  author: post.author,
-  tags: post.tags,
-  status: post.status,
-  views: post.views,
-  publishedAt: post.publishedAt,
-  createdAt: post.createdAt,
-  updatedAt: post.updatedAt,
-});
 
 const createPost = async (req, res, next) => {
   try {
@@ -115,16 +120,16 @@ const createPost = async (req, res, next) => {
           : makeExcerpt(content),
       coverImage:
         typeof coverImage === "string" ? coverImage.trim() : "",
-      tags: await syncTags(tags),
+      tags: await resolveTagIds(tags),
       status: normalizedStatus,
       author: req.user.userId,
       publishedAt: normalizedStatus === "published" ? new Date() : null,
     });
 
-    const populated = await post.populate(
-      "author",
-      "name email bio avatar"
-    );
+    const populated = await post.populate([
+      { path: "author", select: "name email bio avatar" },
+      { path: "tags", select: "name slug" },
+    ]);
 
     return res.status(201).json({
       success: true,
@@ -155,21 +160,33 @@ const getPublicPosts = async (req, res, next) => {
     const query = { status: "published" };
 
     if (search) {
+      // tags is now an array of ObjectIds, so a keyword search can no
+      // longer regex-match it directly — first find any tags whose name
+      // matches, then match posts carrying one of those tag ids.
+      const matchingTagIds = await Tag.find({
+        name: { $regex: search, $options: "i" },
+      }).distinct("_id");
+
       query.$or = [
         { title: { $regex: search, $options: "i" } },
         { excerpt: { $regex: search, $options: "i" } },
-        { tags: { $regex: search, $options: "i" } },
+        { tags: { $in: matchingTagIds } },
       ];
     }
 
     if (tag) {
-      query.tags = tag;
+      const tagDoc = await Tag.findOne({ slug: tag });
+
+      // No matching tag at all — return an empty page rather than either
+      // an error or (worse) silently ignoring the filter.
+      query.tags = tagDoc ? tagDoc._id : null;
     }
 
     const total = await Post.countDocuments(query);
 
     const posts = await Post.find(query)
       .populate("author", "name bio avatar")
+      .populate("tags", "name slug")
       .sort({ publishedAt: -1, createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
@@ -194,7 +211,9 @@ const getPostBySlug = async (req, res, next) => {
     const post = await Post.findOne({
       slug: req.params.slug,
       status: "published",
-    }).populate("author", "name bio avatar");
+    })
+      .populate("author", "name bio avatar")
+      .populate("tags", "name slug");
 
     if (!post) {
       return res.status(404).json({
@@ -221,6 +240,7 @@ const getMyPosts = async (req, res, next) => {
       author: req.user.userId,
     })
       .populate("author", "name bio avatar")
+      .populate("tags", "name slug")
       .sort({ updatedAt: -1 });
 
     return res.status(200).json({
@@ -237,7 +257,9 @@ const getPostForEdit = async (req, res, next) => {
     const post = await Post.findOne({
       _id: req.params.id,
       author: req.user.userId,
-    }).populate("author", "name bio avatar");
+    })
+      .populate("author", "name bio avatar")
+      .populate("tags", "name slug");
 
     if (!post) {
       return res.status(404).json({
@@ -312,7 +334,7 @@ const updatePost = async (req, res, next) => {
     }
 
     if (tags !== undefined) {
-      post.tags = await syncTags(tags);
+      post.tags = await resolveTagIds(tags);
     }
 
     if (status !== undefined) {
@@ -336,10 +358,10 @@ const updatePost = async (req, res, next) => {
 
     await post.save();
 
-    const populated = await post.populate(
-      "author",
-      "name email bio avatar"
-    );
+    const populated = await post.populate([
+      { path: "author", select: "name email bio avatar" },
+      { path: "tags", select: "name slug" },
+    ]);
 
     return res.status(200).json({
       success: true,
@@ -393,10 +415,10 @@ const publishPost = async (req, res, next) => {
 
     await post.save();
 
-    const populated = await post.populate(
-      "author",
-      "name email bio avatar"
-    );
+    const populated = await post.populate([
+      { path: "author", select: "name email bio avatar" },
+      { path: "tags", select: "name slug" },
+    ]);
 
     return res.status(200).json({
       success: true,
@@ -427,10 +449,10 @@ const unpublishPost = async (req, res, next) => {
 
     await post.save();
 
-    const populated = await post.populate(
-      "author",
-      "name email bio avatar"
-    );
+    const populated = await post.populate([
+      { path: "author", select: "name email bio avatar" },
+      { path: "tags", select: "name slug" },
+    ]);
 
     return res.status(200).json({
       success: true,

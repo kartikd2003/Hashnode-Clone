@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import LoadingSpinner from "../components/LoadingSpinner";
+import ErrorMessage from "../components/ErrorMessage";
 import { getTags } from "../services/postService";
 
 const Tags = () => {
@@ -7,49 +9,53 @@ const Tags = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const loadTags = async () => {
-      try {
-        setLoading(true);
-        setError("");
+  const loadTags = async () => {
+    try {
+      setLoading(true);
+      setError("");
 
-        const data = await getTags();
+      const data = await getTags();
 
-        if (!data.success) {
-          setError(data.message || "Unable to load tags.");
-          return;
-        }
-
-        setTags(data.tags || []);
-      } catch (err) {
-        setError(
-          err.response?.data?.message ||
-            "Unable to load tags. Please try again."
-        );
-      } finally {
-        setLoading(false);
+      if (!data.success) {
+        setError(data.message || "Unable to load tags.");
+        return;
       }
-    };
 
+      setTags(data.tags || []);
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          "Unable to load tags. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadTags();
   }, []);
 
   if (loading) {
-    return <p>Loading tags...</p>;
+    return <LoadingSpinner text="Loading tags..." />;
   }
 
   if (error) {
     return (
-      <div className="error-page">
-        <h1>Tags unavailable</h1>
-        <p>{error}</p>
-        <Link to="/">Back to feed</Link>
-      </div>
+      <section className="page-container error-page">
+        <div className="page-header">
+          <h1>Tags unavailable</h1>
+        </div>
+        <ErrorMessage message={error} onRetry={loadTags} />
+        <Link className="back-link" to="/">
+          ← Back to feed
+        </Link>
+      </section>
     );
   }
 
   return (
-    <section className="tags-page">
+    <section className="page-container tags-page">
       <div className="page-header">
         <div>
           <h1>Explore Tags</h1>

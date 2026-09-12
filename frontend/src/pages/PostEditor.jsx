@@ -92,7 +92,10 @@ const PostEditor = () => {
           content: data.post.content || "",
           excerpt: data.post.excerpt || "",
           coverImage: data.post.coverImage || "",
-          tags: (data.post.tags || []).join(", "),
+          tags: (data.post.tags || [])
+            .map((tag) => (typeof tag === "string" ? tag : tag?.name))
+            .filter(Boolean)
+            .join(", "),
           status: data.post.status || "draft",
         });
       } catch (err) {
@@ -289,7 +292,7 @@ const PostEditor = () => {
       setHasUnsavedChanges(false);
       setLastSaved(new Date());
 
-      navigate("/my-posts");
+      navigate("/dashboard");
     } catch (err) {
       setError(
         err.response?.data?.message ||
@@ -339,8 +342,8 @@ const PostEditor = () => {
     navigate("/login", {
       state: {
         from: editing
-          ? `/posts/${id}/edit`
-          : "/posts/new",
+          ? `/editor/${id}`
+          : "/editor/new",
       },
     });
   };

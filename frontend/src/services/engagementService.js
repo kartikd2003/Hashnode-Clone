@@ -42,11 +42,12 @@ export const getComments = async (postId) => {
 
 export const createComment = async (
   postId,
-  content
+  content,
+  parentComment = null
 ) => {
   const response = await api.post(
     `/engagement/posts/${postId}/comments`,
-    { content }
+    { content, parentComment }
   );
 
   return response.data;

@@ -1,44 +1,27 @@
 const Tag = require("../models/Tag");
 const Post = require("../models/Post");
+const slugify = require("../utils/slugify");
+const { safePost } = require("../utils/serializers");
 
 const normalizeTagName = (name) => {
   return name.trim().replace(/\s+/g, " ");
 };
 
-const slugify = (text) => {
-  return text
-    .toString()
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-};
-
 const getAllTags = async (req, res, next) => {
   try {
+    // Post.tags is an array of Tag ObjectIds, so counting is a direct
+    // $lookup + $size match against each tag's own _id — no more string
+    // comparison games between a tag's name/slug and what's stored on
+    // the post.
     const tags = await Tag.aggregate([
       {
         $lookup: {
           from: "posts",
-          let: {
-            tagSlug: "$slug",
-          },
+          let: { tagId: "$_id" },
           pipeline: [
-            {
-              $match: {
-                status: "published",
-              },
-            },
-            {
-              $match: {
-                $expr: {
-                  $in: ["$$tagSlug", "$tags"],
-                },
-              },
-            },
-            {
-              $count: "count",
-            },
+            { $match: { status: "published" } },
+            { $match: { $expr: { $in: ["$$tagId", "$tags"] } } },
+            { $count: "count" },
           ],
           as: "postStats",
         },
@@ -46,26 +29,12 @@ const getAllTags = async (req, res, next) => {
       {
         $addFields: {
           postCount: {
-            $ifNull: [
-              {
-                $arrayElemAt: ["$postStats.count", 0],
-              },
-              0,
-            ],
+            $ifNull: [{ $arrayElemAt: ["$postStats.count", 0] }, 0],
           },
         },
       },
-      {
-        $project: {
-          postStats: 0,
-        },
-      },
-      {
-        $sort: {
-          postCount: -1,
-          name: 1,
-        },
-      },
+      { $project: { postStats: 0 } },
+      { $sort: { postCount: -1, name: 1 } },
     ]);
 
     res.status(200).json({
@@ -99,14 +68,7 @@ const createOrFindTag = async (req, res, next) => {
     }
 
     let tag = await Tag.findOne({
-      $or: [
-        {
-          name: normalizedName,
-        },
-        {
-          slug,
-        },
-      ],
+      $or: [{ name: normalizedName }, { slug }],
     });
 
     if (!tag) {
@@ -144,10 +106,11 @@ const getPostsByTag = async (req, res, next) => {
     }
 
     const posts = await Post.find({
-      tags: tag.slug,
+      tags: tag._id,
       status: "published",
     })
-      .populate("author", "name username avatar")
+      .populate("author", "name avatar")
+      .populate("tags", "name slug")
       .sort({
         publishedAt: -1,
         createdAt: -1,
@@ -156,7 +119,7 @@ const getPostsByTag = async (req, res, next) => {
     res.status(200).json({
       success: true,
       tag,
-      posts,
+      posts: posts.map(safePost),
     });
   } catch (error) {
     next(error);

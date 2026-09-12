@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 
 const User = require("../models/User");
 const env = require("../config/env");
+const { safeUser } = require("../utils/serializers");
 
 const generateToken = (userId) => {
   return jwt.sign(
@@ -11,16 +12,6 @@ const generateToken = (userId) => {
     { expiresIn: "7d" }
   );
 };
-
-const safeUser = (user) => ({
-  id: user._id,
-  name: user.name,
-  email: user.email,
-  bio: user.bio,
-  avatar: user.avatar,
-  createdAt: user.createdAt,
-  updatedAt: user.updatedAt,
-});
 
 const register = async (req, res, next) => {
   try {
@@ -156,11 +147,25 @@ const getMe = async (req, res, next) => {
   }
 };
 
-const updateProfile = async (req, res, next) => {
+const changePassword = async (req, res, next) => {
   try {
-    const { name, bio, avatar } = req.body;
+    const { currentPassword, newPassword } = req.body;
 
-    const user = await User.findById(req.user.userId);
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Current password and new password are required",
+      });
+    }
+
+    if (typeof newPassword !== "string" || newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "New password must be at least 6 characters",
+      });
+    }
+
+    const user = await User.findById(req.user.userId).select("+password");
 
     if (!user) {
       return res.status(404).json({
@@ -169,35 +174,30 @@ const updateProfile = async (req, res, next) => {
       });
     }
 
-    if (name !== undefined) {
-      if (typeof name !== "string" || !name.trim()) {
-        return res.status(400).json({
-          success: false,
-          message: "Name cannot be empty",
-        });
-      }
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
 
-      user.name = name.trim();
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Current password is incorrect",
+      });
     }
 
-    if (bio !== undefined) {
-      user.bio = typeof bio === "string"
-        ? bio.trim()
-        : bio;
+    const isSameAsOld = await bcrypt.compare(newPassword, user.password);
+
+    if (isSameAsOld) {
+      return res.status(400).json({
+        success: false,
+        message: "New password must be different from your current password",
+      });
     }
 
-    if (avatar !== undefined) {
-      user.avatar = typeof avatar === "string"
-        ? avatar.trim()
-        : avatar;
-    }
-
+    user.password = await bcrypt.hash(newPassword, 12);
     await user.save();
 
     return res.status(200).json({
       success: true,
-      message: "Profile updated successfully",
-      user: safeUser(user),
+      message: "Password updated successfully",
     });
   } catch (error) {
     next(error);
@@ -208,5 +208,5 @@ module.exports = {
   register,
   login,
   getMe,
-  updateProfile,
+  changePassword,
 };

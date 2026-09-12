@@ -7,13 +7,13 @@ import Login from "../pages/Login";
 import Feed from "../pages/Feed";
 import PostEditor from "../pages/PostEditor";
 import PostDetail from "../pages/PostDetail";
-import MyPosts from "../pages/MyPosts";
 import TagPage from "../pages/TagPage";
 import PublicProfile from "../pages/PublicProfile";
 import Tags from "../pages/Tags";
 import Dashboard from "../pages/Dashboard";
 import Bookmarks from "../pages/Bookmarks";
 import Notifications from "../pages/Notifications";
+import Settings from "../pages/Settings";
 
 function AppRoutes() {
   return (
@@ -32,12 +32,11 @@ function AppRoutes() {
 
         {/* Protected */}
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/posts/new" element={<ProtectedRoute> <PostEditor /></ProtectedRoute>} />
-        <Route path="/posts/:id/edit" element={<ProtectedRoute> <PostEditor /></ProtectedRoute>} />
-        <Route path="/my-posts" element={<ProtectedRoute> <MyPosts /></ProtectedRoute>} />
+        <Route path="/editor/new" element={<ProtectedRoute> <PostEditor /></ProtectedRoute>} />
+        <Route path="/editor/:id" element={<ProtectedRoute> <PostEditor /></ProtectedRoute>} />
         <Route path="/bookmarks" element={<ProtectedRoute> <Bookmarks /></ProtectedRoute>} />
         <Route path="/notifications" element={<ProtectedRoute> <Notifications /></ProtectedRoute>} />
- 
+        <Route path="/settings" element={<ProtectedRoute> <Settings /></ProtectedRoute>} />
 
       </Route>
     </Routes>

@@ -6,7 +6,7 @@ export const getPosts = async (params = {}) => {
 };
 
 export const getPostBySlug = async (slug) => {
-  const response = await api.get(`/posts/slug/${slug}`);
+  const response = await api.get(`/posts/${slug}`);
   return response.data;
 };
 

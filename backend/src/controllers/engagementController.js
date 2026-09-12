@@ -176,10 +176,12 @@ const unlikePost = async (req, res, next) => {
 
 const getComments = async (req, res, next) => {
   try {
+    // Flat list, newest top-level thread first — the frontend groups
+    // these by parentComment into a two-level tree (comment + replies).
     const comments = await Comment.find({
       post: req.params.postId,
     })
-      .populate("author", "name username avatar")
+      .populate("author", "name avatar")
       .sort({
         createdAt: -1,
       });
@@ -195,7 +197,7 @@ const getComments = async (req, res, next) => {
 
 const createComment = async (req, res, next) => {
   try {
-    const { content } = req.body;
+    const { content, parentComment } = req.body;
     const userId = getUserId(req);
 
     if (!content || !content.trim()) {
@@ -214,18 +216,55 @@ const createComment = async (req, res, next) => {
       });
     }
 
+    // Resolve the reply target, if any, and flatten to a single level:
+    // replying to a reply attaches to that reply's own top-level parent
+    // rather than nesting further.
+    let resolvedParentId = null;
+    let parentAuthorId = null;
+
+    if (parentComment) {
+      const parent = await Comment.findOne({
+        _id: parentComment,
+        post: post._id,
+      });
+
+      if (!parent) {
+        return res.status(404).json({
+          success: false,
+          message: "The comment you're replying to no longer exists",
+        });
+      }
+
+      resolvedParentId = parent.parentComment || parent._id;
+      parentAuthorId = parent.author;
+    }
+
     const comment = await Comment.create({
       post: post._id,
       author: userId,
+      parentComment: resolvedParentId,
       content: content.trim(),
     });
 
     await comment.populate(
       "author",
-      "name username avatar"
+      "name avatar"
     );
 
-    if (post.author.toString() !== userId) {
+    if (resolvedParentId) {
+      // It's a reply — notify whoever wrote the comment being replied to
+      // (not the post author, unless they happen to be the same person).
+      if (parentAuthorId && parentAuthorId.toString() !== userId) {
+        await Notification.create({
+          recipient: parentAuthorId,
+          sender: userId,
+          type: "reply",
+          post: post._id,
+          comment: comment._id,
+          message: "replied to your comment",
+        });
+      }
+    } else if (post.author.toString() !== userId) {
       await Notification.create({
         recipient: post.author,
         sender: userId,
@@ -283,7 +322,7 @@ const updateComment = async (req, res, next) => {
 
     await comment.populate(
       "author",
-      "name username avatar"
+      "name avatar"
     );
 
     res.json({
@@ -397,7 +436,7 @@ const getMyBookmarks = async (req, res, next) => {
         path: "post",
         populate: {
           path: "author",
-          select: "name username avatar",
+          select: "name avatar",
         },
       })
       .sort({
@@ -422,7 +461,7 @@ const getNotifications = async (req, res, next) => {
     const notifications = await Notification.find({
       recipient: getUserId(req),
     })
-      .populate("sender", "name username avatar")
+      .populate("sender", "name avatar")
       .populate("post", "title slug")
       .sort({
         createdAt: -1,

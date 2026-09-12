@@ -125,7 +125,7 @@ function Dashboard() {
         </div>
 
         <Link
-          to="/posts/new"
+          to="/editor/new"
           className="dashboard-create-button"
         >
           ＋ Write Post
@@ -221,7 +221,7 @@ function Dashboard() {
             </p>
 
             <Link
-              to="/posts/new"
+              to="/editor/new"
               className="dashboard-create-button"
             >
               ＋ Create Your First Post
@@ -303,7 +303,7 @@ function Dashboard() {
                           {post.tags
                             .slice(0, 3)
                             .map((tag) => (
-                              <span key={tag}>
+                              <span key={tag.id || tag._id || tag.name || tag}>
                                 #{tag.name || tag}
                               </span>
                             ))}
@@ -320,7 +320,7 @@ function Dashboard() {
                   <div className="dashboard-actions">
 
                     <Link
-                      to={`/posts/${postId}/edit`}
+                      to={`/editor/${postId}`}
                       className="dashboard-action edit"
                     >
                       Edit

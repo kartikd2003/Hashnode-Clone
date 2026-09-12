@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import PasswordInput from "../components/PasswordInput";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -88,14 +89,14 @@ const Register = () => {
 
           <div>
             <label htmlFor="password">Password</label>
-            <input
+            <PasswordInput
               id="password"
               name="password"
-              type="password"
               value={formData.password}
               onChange={handleChange}
               placeholder="Minimum 6 characters"
               minLength={6}
+              autoComplete="new-password"
               required
             />
           </div>
