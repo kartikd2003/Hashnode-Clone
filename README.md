@@ -294,7 +294,6 @@ All endpoints are prefixed with `/api`. Protected routes require `Authorization:
 
 ## Troubleshooting
 
-- **`MONGODB_URI is not configured` / server exits immediately** — you forgot to copy `.env.example` to `.env` in `backend/`.
 - **Frontend can't reach the API / network errors in the browser console** — confirm the backend is running on the port in `VITE_API_URL` (`frontend/.env`), and that `CLIENT_URL` in `backend/.env` matches the URL the frontend is actually served from (CORS will otherwise reject the request).
 - **`ECONNREFUSED` connecting to MongoDB** — make sure the container is running: `docker ps` should show a `mongodb` container. Start it with `docker compose up -d`, and check `docker compose logs mongodb` if it isn't healthy.
 - **Port already in use** — change `PORT` in `backend/.env`, or stop whatever else is using `5000` / `5173` / `27017`.
